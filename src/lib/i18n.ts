@@ -219,7 +219,7 @@ export const i18n = {
       approving: 'Inference engine active...',
       decline: 'Decline',
       confirmDecline: 'Declining this recording will delete it permanently. Are you sure?',
-      analyticsTitle: 'Speech-to-Text Comparison Matrix',
+      analyticsTitle: 'Speech-to-Text Comparison',
       analyticsSub: 'Compare student original speech with 3 AI models and human evaluator transcripts',
       exportCSV: 'Export Excel/CSV',
       searchPlaceholder: 'Search by target, model guess, or evaluator audit...',

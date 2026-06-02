@@ -371,8 +371,8 @@ export default function AdminPage() {
     }
   };
 
-  // Helper to map evaluator token to label (human name)
-  const getEvaluatorLabel = (token: string) => {
+  // Helper to map user token to label (human name)
+  const getUserLabel = (token: string) => {
     const tk = tokens.find(t => t.token === token);
     return tk ? tk.label : token;
   };
@@ -400,7 +400,7 @@ export default function AdminPage() {
     // Build CSV Headers: dynamically add evaluator columns
     const headers = ["Mã Ghi Âm", "Từ Gốc", "Moonshine Quantized", "Zipformer Vi (2025)", "Zipformer Vi (30M)"];
     allEvaluators.forEach(ev => {
-      const label = getEvaluatorLabel(ev);
+      const label = getUserLabel(ev);
       headers.push(`"${label.replace(/"/g, '""')}"`);
     });
     csvContent += headers.join(",") + "\n";
@@ -633,7 +633,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="flex justify-between items-center text-xs text-slate-500 bg-slate-950/40 p-2 rounded-xl border border-slate-950">
-                        <span>{t.admin.studentLabel} <strong className="text-slate-300">{record.student_token.substring(0, 10)}</strong></span>
+                        <span>{t.admin.studentLabel} <strong className="text-slate-300">{getUserLabel(record.student_token)}</strong></span>
                         <span>{new Date(record.created_at).toLocaleTimeString(lang === 'en' ? 'en-US' : 'vi-VN')}</span>
                       </div>
 
@@ -736,7 +736,7 @@ export default function AdminPage() {
                       {allEvaluators.map(ev => (
                         <th key={ev} className="p-4 text-emerald-350">
                           <div className="flex flex-col">
-                            <span className="font-bold">{getEvaluatorLabel(ev)}</span>
+                            <span className="font-bold">{getUserLabel(ev)}</span>
                             <span className="text-[9px] text-slate-500 font-mono font-normal normal-case">{ev}</span>
                           </div>
                         </th>
