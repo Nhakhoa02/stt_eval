@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   Play, Pause, Send, CheckCircle, ListTodo, LogOut, 
-  ChevronRight, Volume2, ShieldAlert, Loader2, Sparkles 
+  ChevronRight, Volume2, ShieldAlert, Loader2, Sparkles, Languages 
 } from 'lucide-react';
+import { i18n, Language } from '@/lib/i18n';
 
 interface AudioRecord {
   id: string;
@@ -21,6 +22,7 @@ export default function EvaluatorPage() {
   const [token, setToken] = useState<string | null>(null);
   const [label, setLabel] = useState<string>('');
   const [authorized, setAuthorized] = useState<boolean>(false);
+  const [lang, setLang] = useState<Language>('vi');
   
   // App states
   const [records, setRecords] = useState<AudioRecord[]>([]);
@@ -35,6 +37,11 @@ export default function EvaluatorPage() {
 
   // 1. Session verification
   useEffect(() => {
+    const savedLang = localStorage.getItem('doraebin_lang') as Language;
+    if (savedLang === 'vi' || savedLang === 'en') {
+      setLang(savedLang);
+    }
+
     const savedToken = localStorage.getItem('doraebin_token');
     const savedRole = localStorage.getItem('doraebin_role');
     const savedLabel = localStorage.getItem('doraebin_label');
@@ -51,6 +58,14 @@ export default function EvaluatorPage() {
     // Fetch pending approved records to evaluate
     loadApprovedRecords(savedToken);
   }, [router]);
+
+  const toggleLang = () => {
+    const next = lang === 'vi' ? 'en' : 'vi';
+    setLang(next);
+    localStorage.setItem('doraebin_lang', next);
+  };
+
+  const t = i18n[lang];
 
   // 2. Fetch approved audios not yet evaluated by this user
   const loadApprovedRecords = async (evaluatorToken: string) => {
@@ -155,56 +170,56 @@ export default function EvaluatorPage() {
         setRecords(prev => prev.filter(r => r.id !== recordId));
       }, 1000);
       
-    } catch (err) {
-      console.error('Submit error:', err);
-      alert('Không thể lưu kết quả thẩm định. Vui lòng kiểm tra lại kết nối.');
-    } finally {
-      setSubmittingIds(prev => prev.filter(id => id !== recordId));
-    }
-  };
+      } catch (err) {
+        console.error('Submit error:', err);
+        alert(lang === 'en' ? 'Could not save evaluation result. Please check your connection.' : 'Không thể lưu kết quả thẩm định. Vui lòng kiểm tra lại kết nối.');
+      } finally {
+        setSubmittingIds(prev => prev.filter(id => id !== recordId));
+      }
+    };
 
-  // 5. Submit all transcribed files in one batch
-  const handleSubmitAll = async () => {
-    if (!token) return;
-    
-    // Find all records that have transcription text entered
-    const transcribedRecords = records.filter(r => transcriptsMap[r.id]?.trim());
-    if (transcribedRecords.length === 0) return;
-    
-    const recordIds = transcribedRecords.map(r => r.id);
-    setSubmittingIds(prev => [...prev, ...recordIds]);
-    
-    try {
-      const inserts = transcribedRecords.map(r => ({
-        audio_record_id: r.id,
-        source: `evaluator:${token}`,
-        transcript_text: transcriptsMap[r.id].trim().toLowerCase()
-      }));
+    // 5. Submit all transcribed files in one batch
+    const handleSubmitAll = async () => {
+      if (!token) return;
       
-      const { error } = await supabase
-        .from('transcripts')
-        .insert(inserts);
+      // Find all records that have transcription text entered
+      const transcribedRecords = records.filter(r => transcriptsMap[r.id]?.trim());
+      if (transcribedRecords.length === 0) return;
+      
+      const recordIds = transcribedRecords.map(r => r.id);
+      setSubmittingIds(prev => [...prev, ...recordIds]);
+      
+      try {
+        const inserts = transcribedRecords.map(r => ({
+          audio_record_id: r.id,
+          source: `evaluator:${token}`,
+          transcript_text: transcriptsMap[r.id].trim().toLowerCase()
+        }));
         
-      if (error) throw error;
-      
-      // Clear transcript local state for successfully submitted items
-      setTranscriptsMap(prev => {
-        const copy = { ...prev };
-        recordIds.forEach(id => delete copy[id]);
-        return copy;
-      });
-      
-      alert(`Đã gửi thành công ${transcribedRecords.length} kết quả thẩm định!`);
-      // Reload queue
-      loadApprovedRecords(token);
-      
-    } catch (err) {
-      console.error('Batch submit error:', err);
-      alert('Đã xảy ra lỗi khi gửi hàng loạt kết quả thẩm định.');
-    } finally {
-      setSubmittingIds(prev => prev.filter(id => !recordIds.includes(id)));
-    }
-  };
+        const { error } = await supabase
+          .from('transcripts')
+          .insert(inserts);
+          
+        if (error) throw error;
+        
+        // Clear transcript local state for successfully submitted items
+        setTranscriptsMap(prev => {
+          const copy = { ...prev };
+          recordIds.forEach(id => delete copy[id]);
+          return copy;
+        });
+        
+        alert(lang === 'en' ? `Submitted ${transcribedRecords.length} evaluations successfully!` : `Đã gửi thành công ${transcribedRecords.length} kết quả thẩm định!`);
+        // Reload queue
+        loadApprovedRecords(token);
+        
+      } catch (err) {
+        console.error('Batch submit error:', err);
+        alert(lang === 'en' ? 'An error occurred while submitting batch evaluations.' : 'Đã xảy ra lỗi khi gửi hàng loạt kết quả thẩm định.');
+      } finally {
+        setSubmittingIds(prev => prev.filter(id => !recordIds.includes(id)));
+      }
+    };
 
   // Logout session
   const handleLogout = () => {
@@ -227,16 +242,28 @@ export default function EvaluatorPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">Doraebin Auditing Deck</h1>
-            <p className="text-xs text-slate-400">Chuyên viên thẩm định: <span className="text-emerald-400 font-semibold">{label || token}</span></p>
+            <p className="text-xs text-slate-400">{t.evaluator.evaluatorLabel} <span className="text-emerald-400 font-semibold">{label || token}</span></p>
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm"
-        >
-          <LogOut className="w-4 h-4" />
-          Đăng xuất
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Language Toggle Selector */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-slate-200 transition cursor-pointer"
+          >
+            <Languages className="w-3.5 h-3.5 text-indigo-400" />
+            {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+          </button>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            {t.common.logout}
+          </button>
+        </div>
       </header>
 
       {/* Main Container */}
@@ -246,9 +273,9 @@ export default function EvaluatorPage() {
         <div className="bg-gradient-to-r from-indigo-950/40 via-slate-900/60 to-indigo-950/40 border border-slate-800 rounded-2xl p-4 flex gap-4 items-start shadow-xl">
           <Sparkles className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-bold text-slate-200">Nguyên tắc Thẩm định Mù (Blind Auditing)</h3>
+            <h3 className="text-sm font-bold text-slate-200">{t.evaluator.instructionsTitle}</h3>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Để đảm bảo khách quan, bạn sẽ nghe âm thanh thu âm từ sinh viên mà **không biết từ gốc cần đọc** hay **kết quả nhận dạng của các mô hình**. Hãy nghe kỹ và gõ chính xác các từ tiếng Việt mà bạn nghe được vào ô trống.
+              {t.evaluator.instructionsText}
             </p>
           </div>
         </div>
@@ -257,17 +284,17 @@ export default function EvaluatorPage() {
         <div className="flex justify-between items-center bg-slate-900/20 p-3 rounded-2xl border border-slate-900">
           <div className="flex items-center gap-2">
             <ListTodo className="w-4 h-4 text-slate-400" />
-            <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Hàng chờ thẩm định:</span>
+            <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">{t.evaluator.queueTitle}:</span>
             <span className="text-xs bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-full">{records.length}</span>
           </div>
           
           {records.some(r => transcriptsMap[r.id]?.trim()) && (
             <button
               onClick={handleSubmitAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg hover:shadow-indigo-600/25"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg hover:shadow-indigo-600/25 cursor-pointer"
             >
               <Send className="w-3 h-3" />
-              Gửi tất cả bài đã gõ
+              {t.evaluator.submitAll}
             </button>
           )}
         </div>
@@ -277,14 +304,16 @@ export default function EvaluatorPage() {
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
-              <p className="text-sm text-slate-400">Đang tải danh sách bản thu âm approved...</p>
+              <p className="text-sm text-slate-400">{lang === 'en' ? 'Loading approved recordings...' : 'Đang tải danh sách bản thu âm approved...'}</p>
             </div>
           ) : records.length === 0 ? (
             <div className="py-20 border border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center p-8 bg-slate-900/10">
               <CheckCircle className="w-16 h-16 text-slate-800 stroke-1 mb-4" />
-              <h3 className="text-lg font-bold text-slate-400">Hoàn tất xuất sắc!</h3>
+              <h3 className="text-lg font-bold text-slate-400">{t.evaluator.noAudios}</h3>
               <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                Hiện tại không còn bản thu âm nào đã được duyệt cần thẩm định. Hãy quay lại sau khi Admin duyệt các bản thu âm mới!
+                {lang === 'en' 
+                  ? 'There are no pending recordings to evaluate. Please check back later!' 
+                  : 'Hiện tại không còn bản thu âm nào đã được duyệt cần thẩm định. Hãy quay lại sau khi Admin duyệt các bản thu âm mới!'}
               </p>
             </div>
           ) : (
@@ -315,8 +344,10 @@ export default function EvaluatorPage() {
                       {activePlayingId === record.id ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
                     </button>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-200">Ghi âm nhãn #{record.id.substring(0, 8)}</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Ngày thu: {new Date(record.created_at).toLocaleDateString('vi-VN')}</p>
+                      <h4 className="text-sm font-bold text-slate-200">{lang === 'en' ? 'Recording' : 'Ghi âm nhãn'} #{record.id.substring(0, 8)}</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {lang === 'en' ? 'Recorded on' : 'Ngày thu'}: {new Date(record.created_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}
+                      </p>
                     </div>
                   </div>
 
@@ -324,7 +355,7 @@ export default function EvaluatorPage() {
                   <div className="flex-1 w-full flex flex-col sm:flex-row gap-3 items-center">
                     <input
                       type="text"
-                      placeholder="Gõ các từ bạn nghe được ở đây..."
+                      placeholder={t.evaluator.typeGuess}
                       disabled={isSubmitting || isSuccess}
                       value={transcriptsMap[record.id] || ''}
                       onChange={(e) => handleTextChange(record.id, e.target.value)}
@@ -334,7 +365,7 @@ export default function EvaluatorPage() {
                     {isSuccess ? (
                       <div className="w-full sm:w-auto px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-1.5 text-emerald-400 text-sm font-bold animate-bounce">
                         <CheckCircle className="w-4 h-4" />
-                        Đã gửi
+                        {lang === 'en' ? 'Submitted' : 'Đã gửi'}
                       </div>
                     ) : (
                       <button
@@ -343,7 +374,7 @@ export default function EvaluatorPage() {
                         className={`w-full sm:w-auto px-5 py-2.5 font-bold rounded-xl flex items-center justify-center gap-1.5 transition text-sm ${
                           hasText 
                             ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer' 
-                            : 'bg-slate-900 border border-slate-850 text-slate-600 cursor-not-allowed'
+                            : 'bg-slate-900 border border-slate-850 text-slate-650 cursor-not-allowed'
                         }`}
                       >
                         {isSubmitting ? (
@@ -351,7 +382,7 @@ export default function EvaluatorPage() {
                         ) : (
                           <ChevronRight className="w-4 h-4" />
                         )}
-                        Gửi
+                        {lang === 'en' ? 'Send' : 'Gửi'}
                       </button>
                     )}
                   </div>

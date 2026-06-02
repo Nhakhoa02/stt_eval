@@ -4,19 +4,26 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
+import { i18n, Language } from '@/lib/i18n';
 
 function JoinPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const [lang, setLang] = useState<Language>('vi');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
+    const savedLang = localStorage.getItem('doraebin_lang') as Language;
+    if (savedLang === 'vi' || savedLang === 'en') {
+      setLang(savedLang);
+    }
+
     async function validateToken() {
       if (!token) {
         setStatus('error');
-        setErrorMsg('Không tìm thấy mã truy cập (token) trong liên kết.');
+        setErrorMsg(savedLang === 'en' ? 'Access token missing from URL.' : 'Không tìm thấy mã truy cập (token) trong liên kết.');
         return;
       }
 
@@ -29,7 +36,7 @@ function JoinPageContent() {
 
         if (error || !data) {
           setStatus('error');
-          setErrorMsg('Liên kết truy cập này không hợp lệ hoặc đã hết hạn.');
+          setErrorMsg(savedLang === 'en' ? 'This access link is invalid or has expired.' : 'Liên kết truy cập này không hợp lệ hoặc đã hết hạn.');
           return;
         }
 
@@ -51,12 +58,14 @@ function JoinPageContent() {
 
       } catch (err) {
         setStatus('error');
-        setErrorMsg('Đã xảy ra lỗi hệ thống trong quá trình xác thực.');
+        setErrorMsg(savedLang === 'en' ? 'A system error occurred during authentication.' : 'Đã xảy ra lỗi hệ thống trong quá trình xác thực.');
       }
     }
 
     validateToken();
   }, [token, router]);
+
+  const t = i18n[lang];
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
@@ -68,8 +77,8 @@ function JoinPageContent() {
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-4 py-8">
             <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
-            <h2 className="text-xl font-semibold text-slate-100">Xác thực liên kết truy cập</h2>
-            <p className="text-slate-400 text-sm">Vui lòng chờ trong khi hệ thống xác thực thông tin...</p>
+            <h2 className="text-xl font-semibold text-slate-100">{t.join.verifying}</h2>
+            <p className="text-slate-400 text-sm">{t.join.verifyingSub}</p>
           </div>
         )}
 
@@ -78,8 +87,10 @@ function JoinPageContent() {
             <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center">
               <ShieldCheck className="w-8 h-8 text-emerald-400" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-100">Xác thực thành công!</h2>
-            <p className="text-emerald-400 text-sm font-medium">Đang chuyển hướng đến bảng điều khiển...</p>
+            <h2 className="text-xl font-semibold text-slate-100">{t.common.activeSession}!</h2>
+            <p className="text-emerald-400 text-sm font-medium">
+              {lang === 'en' ? 'Redirecting to your dashboard...' : 'Đang chuyển hướng đến bảng điều khiển...'}
+            </p>
           </div>
         )}
 
@@ -88,10 +99,10 @@ function JoinPageContent() {
             <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-full flex items-center justify-center">
               <ShieldAlert className="w-8 h-8 text-rose-400" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-100">Lỗi xác thực</h2>
+            <h2 className="text-xl font-semibold text-slate-100">{t.join.invalid}</h2>
             <p className="text-rose-400 text-sm font-medium">{errorMsg}</p>
             <p className="text-slate-400 text-xs mt-2">
-              Vui lòng liên hệ với Quản trị viên để nhận liên kết truy cập mới.
+              {t.join.invalidSub}
             </p>
           </div>
         )}
@@ -106,7 +117,7 @@ export default function JoinPage() {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
-          <h2 className="text-xl font-semibold text-slate-100">Đang kết nối...</h2>
+          <h2 className="text-xl font-semibold text-slate-100">Connecting...</h2>
         </div>
       </div>
     }>

@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   Mic, Square, RotateCcw, Trash2, Send, Play, Pause, 
-  HelpCircle, Shuffle, ChevronRight, CheckCircle2, AlertCircle, LogOut, Loader2
+  HelpCircle, Shuffle, ChevronRight, CheckCircle2, AlertCircle, LogOut, Loader2, Languages
 } from 'lucide-react';
+import { i18n, Language } from '@/lib/i18n';
 
 interface RecordedClip {
   id: string;
@@ -22,6 +23,7 @@ export default function StudentPage() {
   const [token, setToken] = useState<string | null>(null);
   const [label, setLabel] = useState<string>('');
   const [authorized, setAuthorized] = useState<boolean>(false);
+  const [lang, setLang] = useState<Language>('vi');
   
   // App states
   const [words, setWords] = useState<string[]>([]);
@@ -47,6 +49,11 @@ export default function StudentPage() {
 
   // 1. Session authorization check
   useEffect(() => {
+    const savedLang = localStorage.getItem('doraebin_lang') as Language;
+    if (savedLang === 'vi' || savedLang === 'en') {
+      setLang(savedLang);
+    }
+
     const savedToken = localStorage.getItem('doraebin_token');
     const savedRole = localStorage.getItem('doraebin_role');
     const savedLabel = localStorage.getItem('doraebin_label');
@@ -63,6 +70,14 @@ export default function StudentPage() {
     // Load words list
     loadWords();
   }, [router]);
+
+  const toggleLang = () => {
+    const next = lang === 'vi' ? 'en' : 'vi';
+    setLang(next);
+    localStorage.setItem('doraebin_lang', next);
+  };
+
+  const t = i18n[lang];
 
   // Load words from sample_text table
   const loadWords = async () => {
@@ -334,16 +349,28 @@ export default function StudentPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">Doraebin Voice Lab</h1>
-            <p className="text-xs text-slate-400">Sinh viên: <span className="text-emerald-400 font-semibold">{label || token}</span></p>
+            <p className="text-xs text-slate-400">{t.common.student}: <span className="text-emerald-400 font-semibold">{label || token}</span></p>
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm"
-        >
-          <LogOut className="w-4 h-4" />
-          Đăng xuất
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Language Toggle Button */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-slate-200 transition cursor-pointer"
+          >
+            <Languages className="w-3.5 h-3.5 text-indigo-400" />
+            {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+          </button>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            {t.common.logout}
+          </button>
+        </div>
       </header>
 
       {/* Main Studio layout */}
@@ -355,7 +382,7 @@ export default function StudentPage() {
             {/* Glow accent */}
             <div className="absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl"></div>
             
-            <span className="text-xs text-indigo-400 tracking-wider uppercase font-semibold mb-3">Từ Phát Âm Hiện Tại</span>
+            <span className="text-xs text-indigo-400 tracking-wider uppercase font-semibold mb-3">{t.student.targetWord}</span>
             
             {/* Bold Target Vietnamese Word Display */}
             <h2 className="text-4xl md:text-5xl font-extrabold text-slate-100 text-center tracking-tight capitalize select-all mb-8 bg-gradient-to-b from-white to-slate-200 bg-clip-text text-transparent">
@@ -367,7 +394,7 @@ export default function StudentPage() {
               <canvas ref={canvasRef} className="w-full h-full" width={400} height={96} />
               {!isRecording && (
                 <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
-                  Thiết bị sẵn sàng. Nhấn để bắt đầu đọc.
+                  {lang === 'en' ? 'Device ready. Click micro to speak.' : 'Thiết bị sẵn sàng. Nhấn để bắt đầu đọc.'}
                 </div>
               )}
             </div>
@@ -379,6 +406,7 @@ export default function StudentPage() {
                   onClick={startRecording}
                   disabled={uploadStatus === 'uploading'}
                   className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center group hover:bg-emerald-500 hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-emerald-500/20 duration-300 disabled:opacity-50"
+                  title={t.student.startRecord}
                 >
                   <Mic className="w-8 h-8 text-emerald-400 group-hover:text-slate-950 transition duration-300" />
                 </button>
@@ -386,6 +414,7 @@ export default function StudentPage() {
                 <button
                   onClick={stopRecording}
                   className="w-20 h-20 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center hover:bg-rose-500 hover:scale-105 active:scale-95 transition-all animate-pulse shadow-lg hover:shadow-rose-500/20 duration-300"
+                  title={t.student.stopRecord}
                 >
                   <Square className="w-7 h-7 text-rose-400 hover:text-slate-950 transition duration-300 fill-current" />
                 </button>
@@ -397,7 +426,7 @@ export default function StudentPage() {
           <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col gap-4">
             <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
               <Shuffle className="w-4 h-4 text-indigo-400" />
-              Thay đổi từ phát âm
+              {lang === 'en' ? 'Switch target word' : 'Thay đổi từ phát âm'}
             </h3>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -406,7 +435,7 @@ export default function StudentPage() {
                 disabled={words.length === 0}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-slate-100 transition text-sm text-slate-300"
               >
-                Gợi ý từ ngẫu nhiên
+                {t.student.randomWord}
               </button>
               
               <div className="h-[1px] sm:h-auto sm:w-[1px] bg-slate-850"></div>
@@ -414,7 +443,7 @@ export default function StudentPage() {
               <form onSubmit={handleUseCustomWord} className="flex-1 flex gap-2">
                 <input
                   type="text"
-                  placeholder="Nhập từ của riêng bạn..."
+                  placeholder={t.student.wordPlaceholder}
                   value={customWord}
                   onChange={(e) => setCustomWord(e.target.value)}
                   className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
@@ -435,11 +464,11 @@ export default function StudentPage() {
           <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 max-h-[600px] overflow-hidden">
             <div className="flex justify-between items-center pb-4 border-b border-slate-800 mb-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-200">Danh sách thu âm hiện có</h3>
-                <p className="text-xs text-slate-400">Xem lại và tải lên hệ thống</p>
+                <h3 className="text-sm font-bold text-slate-200">{t.student.reviewTitle}</h3>
+                <p className="text-xs text-slate-400">{t.student.reviewSub}</p>
               </div>
               <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs px-2.5 py-1 rounded-full font-bold">
-                {clips.length} clip nháp
+                {clips.length} {lang === 'en' ? 'drafts' : 'clip nháp'}
               </span>
             </div>
 
@@ -448,8 +477,7 @@ export default function StudentPage() {
               {clips.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
                   <Mic className="w-12 h-12 text-slate-700 stroke-1 mb-3 animate-pulse" />
-                  <p className="text-sm">Chưa có bài đọc nào được ghi âm.</p>
-                  <p className="text-xs mt-1 text-slate-600">Bấm nút Micro màu xanh ở bên để thu âm giọng đọc của bạn.</p>
+                  <p className="text-sm">{t.student.noDrafts}</p>
                 </div>
               ) : (
                 clips.map((clip) => (
@@ -459,7 +487,7 @@ export default function StudentPage() {
                   >
                     <div className="flex-1 min-w-0 pr-4">
                       <p className="text-sm font-bold text-slate-200 capitalize truncate">{clip.wordText}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Nhấp để nghe lại ghi âm nháp</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{t.student.listeningCheck}</p>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -476,6 +504,7 @@ export default function StudentPage() {
                       <button
                         onClick={() => handleDeleteClip(clip.id)}
                         className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 transition"
+                        title={t.student.deleteDraft}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -494,7 +523,7 @@ export default function StudentPage() {
                     className="w-full py-3 bg-indigo-600/50 text-white font-bold rounded-2xl flex items-center justify-center gap-2 cursor-wait"
                   >
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Đang gửi dữ liệu ({clips.length} clip)...
+                    {t.student.submitting} ({clips.length} clip)...
                   </button>
                 ) : (
                   <button
@@ -502,7 +531,7 @@ export default function StudentPage() {
                     className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:shadow-indigo-500/20 active:scale-98 transition duration-200"
                   >
                     <Send className="w-4 h-4" />
-                    Gửi tất cả ghi âm ({clips.length})
+                    {t.student.submitAll} ({clips.length})
                   </button>
                 )}
               </div>
@@ -512,7 +541,7 @@ export default function StudentPage() {
             {uploadStatus === 'success' && (
               <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 text-emerald-400 text-sm">
                 <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                Gửi bài đọc thành công! Đang chờ Admin duyệt.
+                {t.student.uploadSuccessSub}
               </div>
             )}
             
@@ -520,7 +549,7 @@ export default function StudentPage() {
               <div className="mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex flex-col gap-1 text-rose-400 text-sm">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  Gửi ghi âm thất bại.
+                  {lang === 'en' ? 'Submission failed.' : 'Gửi ghi âm thất bại.'}
                 </div>
                 {uploadErrorMsg && (
                   <p className="text-xs text-rose-300 ml-7 break-all font-semibold">{uploadErrorMsg}</p>

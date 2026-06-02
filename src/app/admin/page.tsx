@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { 
   ShieldCheck, ShieldAlert, KeyRound, Loader2, Link2, 
   Trash2, Check, Copy, UserCheck, Play, Pause, Trash, 
-  FileText, Download, CheckCircle, XCircle, Search, RefreshCw, BarChart2
+  FileText, Download, CheckCircle, XCircle, Search, RefreshCw, BarChart2, Languages
 } from 'lucide-react';
+import { i18n, Language } from '@/lib/i18n';
 
 interface AuthToken {
   id: string;
@@ -44,6 +45,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loginLoading, setLoginLoading] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>('');
+  const [lang, setLang] = useState<Language>('vi');
 
   // Tab state: 'moderation' | 'analytics' | 'tokens'
   const [activeTab, setActiveTab] = useState<'moderation' | 'analytics' | 'tokens'>('moderation');
@@ -71,12 +73,25 @@ export default function AdminPage() {
 
   // Check existing session
   useEffect(() => {
+    const savedLang = localStorage.getItem('doraebin_lang') as Language;
+    if (savedLang === 'vi' || savedLang === 'en') {
+      setLang(savedLang);
+    }
+    
     const savedAdmin = localStorage.getItem('doraebin_admin');
     if (savedAdmin === 'true') {
       setIsAdmin(true);
       loadAdminData();
     }
   }, []);
+
+  const toggleLang = () => {
+    const next = lang === 'vi' ? 'en' : 'vi';
+    setLang(next);
+    localStorage.setItem('doraebin_lang', next);
+  };
+
+  const t = i18n[lang];
 
   // Load all tables on login
   const loadAdminData = () => {
@@ -433,7 +448,18 @@ export default function AdminPage() {
   // -------------------------------------------------------------
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative">
+        {/* Floating Language Switcher */}
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/60 hover:bg-slate-900 border border-slate-855 hover:border-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-slate-200 transition cursor-pointer"
+          >
+            <Languages className="w-3.5 h-3.5 text-indigo-400" />
+            {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+          </button>
+        </div>
+
         <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
           <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -442,15 +468,15 @@ export default function AdminPage() {
             <div className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center">
               <KeyRound className="w-6 h-6 text-indigo-400" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">Doraebin Admin Control</h1>
-            <p className="text-slate-400 text-xs">Vui lòng nhập mật mã quản trị viên để mở bảng điều khiển.</p>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">{t.admin.loginTitle}</h1>
+            <p className="text-slate-400 text-xs">{t.admin.loginSub}</p>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
               <input
                 type="password"
-                placeholder="Nhập mã bí mật..."
+                placeholder={t.admin.loginPlaceholder}
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 className="w-full bg-slate-950/80 border border-slate-850 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-650 focus:outline-none transition"
@@ -461,9 +487,9 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={loginLoading}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-98 transition duration-200"
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-98 transition duration-200 cursor-pointer"
             >
-              {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác thực'}
+              {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t.admin.authenticate}
             </button>
           </form>
         </div>
@@ -485,15 +511,27 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">Doraebin Admin Dashboard</h1>
-            <p className="text-xs text-slate-400">Trạng thái: <span className="text-emerald-400 font-semibold">Đã xác thực</span></p>
+            <p className="text-xs text-slate-400">{t.common.status}: <span className="text-emerald-400 font-semibold">{t.common.activeSession}</span></p>
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm"
-        >
-          Đăng xuất
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Language Toggle Selector */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-955/80 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 rounded-xl text-xs font-bold text-slate-350 hover:text-slate-200 transition cursor-pointer"
+          >
+            <Languages className="w-3.5 h-3.5 text-indigo-400" />
+            {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+          </button>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition text-sm cursor-pointer"
+          >
+            {t.common.logout}
+          </button>
+        </div>
       </header>
 
       {/* Navigation Tabs */}
@@ -501,33 +539,33 @@ export default function AdminPage() {
         <div className="max-w-5xl mx-auto flex gap-2">
           <button
             onClick={() => setActiveTab('moderation')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition ${
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               activeTab === 'moderation'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
-            Hàng chờ duyệt ({pendingRecords.length})
+            {t.admin.tabModeration} ({pendingRecords.length})
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition ${
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               activeTab === 'analytics'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
-            Bảng thống kê ({approvedRecords.length})
+            {t.admin.tabAnalytics} ({approvedRecords.length})
           </button>
           <button
             onClick={() => setActiveTab('tokens')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition ${
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               activeTab === 'tokens'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
-            Liên kết truy cập ({tokens.length})
+            {t.admin.tabTokens} ({tokens.length})
           </button>
         </div>
       </div>
@@ -542,12 +580,12 @@ export default function AdminPage() {
           <section className="flex flex-col gap-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-900">
               <div>
-                <h2 className="text-xl font-bold text-slate-100">Bản thu âm đang chờ duyệt</h2>
-                <p className="text-xs text-slate-400">Nghe lại, duyệt để gọi Modal STT, hoặc từ chối</p>
+                <h2 className="text-xl font-bold text-slate-100">{t.admin.moderationTitle}</h2>
+                <p className="text-xs text-slate-400">{t.admin.moderationSub}</p>
               </div>
               <button 
                 onClick={loadPendingRecords} 
-                className="p-2 text-slate-450 hover:text-slate-250 hover:bg-slate-900 rounded-lg transition"
+                className="p-2 text-slate-450 hover:text-slate-250 hover:bg-slate-900 rounded-lg transition cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
@@ -556,12 +594,12 @@ export default function AdminPage() {
             {pendingLoading ? (
               <div className="py-20 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                <p className="text-sm text-slate-400">Đang tải danh sách chờ duyệt...</p>
+                <p className="text-sm text-slate-400">{lang === 'en' ? 'Loading pending records...' : 'Đang tải danh sách chờ duyệt...'}</p>
               </div>
             ) : pendingRecords.length === 0 ? (
               <div className="py-20 border border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center p-8 bg-slate-900/10">
                 <CheckCircle className="w-12 h-12 text-slate-700 stroke-1 mb-3" />
-                <p className="text-sm text-slate-500">Tuyệt vời! Không còn ghi âm nào cần kiểm duyệt.</p>
+                <p className="text-sm text-slate-500">{t.admin.noPending}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -577,14 +615,14 @@ export default function AdminPage() {
                     >
                       <div className="flex justify-between items-start gap-4">
                         <div className="min-w-0">
-                          <span className="text-xs text-indigo-400 uppercase font-semibold">Từ đọc được ghi:</span>
+                          <span className="text-xs text-indigo-400 uppercase font-semibold">{t.admin.studentText}</span>
                           <h4 className="text-lg font-extrabold capitalize text-slate-100 truncate">{record.word_text}</h4>
                         </div>
                         
                         {/* Inline Audio Player */}
                         <button
                           onClick={() => togglePlayAudio(record.id, record.audio_url)}
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center border transition ${
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center border transition cursor-pointer ${
                             activePlayingId === record.id
                               ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
                               : 'bg-slate-850 border-slate-800 text-slate-350 hover:bg-slate-800'
@@ -595,8 +633,8 @@ export default function AdminPage() {
                       </div>
 
                       <div className="flex justify-between items-center text-xs text-slate-500 bg-slate-950/40 p-2 rounded-xl border border-slate-950">
-                        <span>Học viên: <strong className="text-slate-300">{record.student_token.substring(0, 10)}</strong></span>
-                        <span>{new Date(record.created_at).toLocaleTimeString('vi-VN')}</span>
+                        <span>{t.admin.studentLabel} <strong className="text-slate-300">{record.student_token.substring(0, 10)}</strong></span>
+                        <span>{new Date(record.created_at).toLocaleTimeString(lang === 'en' ? 'en-US' : 'vi-VN')}</span>
                       </div>
 
                       {/* Approval triggers */}
@@ -604,27 +642,27 @@ export default function AdminPage() {
                         <button
                           onClick={() => handleApprove(record)}
                           disabled={isDisabled}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 disabled:cursor-wait"
+                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 disabled:cursor-wait cursor-pointer"
                         >
                           {isApproving ? (
                             <>
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              Đang gọi Modal STT...
+                              {t.admin.approving}
                             </>
                           ) : (
                             <>
                               <CheckCircle className="w-3.5 h-3.5" />
-                              Duyệt & Gọi AI
+                              {t.admin.approveCallAI}
                             </>
                           )}
                         </button>
                         <button
                           onClick={() => handleDecline(record.id)}
                           disabled={isDisabled}
-                          className="px-3 py-2 bg-slate-850 hover:bg-rose-900/20 hover:border-rose-900/30 border border-slate-800 text-rose-400 font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition disabled:opacity-50"
+                          className="px-3 py-2 bg-slate-850 hover:bg-rose-900/20 hover:border-rose-900/30 border border-slate-800 text-rose-400 font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition disabled:opacity-50 cursor-pointer"
                         >
                           {isDeclining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                          Từ chối
+                          {t.admin.decline}
                         </button>
                       </div>
                     </div>
@@ -642,22 +680,22 @@ export default function AdminPage() {
           <section className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-900">
               <div>
-                <h2 className="text-xl font-bold text-slate-100">Bảng so sánh kết quả STT</h2>
-                <p className="text-xs text-slate-400">So sánh giọng đọc gốc với dự đoán của 3 Model AI và thẩm định viên</p>
+                <h2 className="text-xl font-bold text-slate-100">{t.admin.analyticsTitle}</h2>
+                <p className="text-xs text-slate-400">{t.admin.analyticsSub}</p>
               </div>
               
               <div className="flex w-full sm:w-auto items-center gap-2">
                 <button
                   onClick={handleExportCSV}
                   disabled={approvedRecords.length === 0}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg disabled:opacity-50 w-full sm:w-auto"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg disabled:opacity-50 w-full sm:w-auto cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Xuất Excel/CSV
+                  {t.admin.exportCSV}
                 </button>
                 <button 
                   onClick={loadAnalytics} 
-                  className="p-2 text-slate-450 hover:text-slate-250 hover:bg-slate-900 rounded-lg transition"
+                  className="p-2 text-slate-450 hover:text-slate-250 hover:bg-slate-900 rounded-lg transition cursor-pointer"
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
@@ -669,7 +707,7 @@ export default function AdminPage() {
               <Search className="w-4 h-4 text-slate-500" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo từ gốc, dự đoán hoặc kết quả thẩm định..."
+                placeholder={t.admin.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none"
@@ -679,22 +717,22 @@ export default function AdminPage() {
             {analyticsLoading ? (
               <div className="py-20 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                <p className="text-sm text-slate-400">Đang đồng bộ dữ liệu...</p>
+                <p className="text-sm text-slate-400">{lang === 'en' ? 'Synchronizing records...' : 'Đang đồng bộ dữ liệu...'}</p>
               </div>
             ) : filteredAnalytics.length === 0 ? (
               <div className="py-20 border border-dashed border-slate-800 rounded-3xl text-center p-8 bg-slate-900/10 text-slate-500">
-                Không tìm thấy dữ liệu so sánh phù hợp.
+                {t.admin.noAnalytics}
               </div>
             ) : (
               <div className="overflow-x-auto border border-slate-850 rounded-2xl shadow-xl bg-slate-900/20 backdrop-blur-md">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-350 font-bold uppercase tracking-wider">
-                      <th className="p-4">Nghe</th>
-                      <th className="p-4">Từ Gốc</th>
-                      <th className="p-4 text-indigo-300">Moonshine (ORT)</th>
-                      <th className="p-4 text-indigo-300">Zipformer (2025)</th>
-                      <th className="p-4 text-indigo-300">Zipformer (30M)</th>
+                      <th className="p-4">{t.admin.thAudio}</th>
+                      <th className="p-4">{t.admin.thWord}</th>
+                      <th className="p-4 text-indigo-300">{t.admin.thMoonshine}</th>
+                      <th className="p-4 text-indigo-300">{t.admin.thZipformer2025}</th>
+                      <th className="p-4 text-indigo-300">{t.admin.thZipformer30M}</th>
                       {allEvaluators.map(ev => (
                         <th key={ev} className="p-4 text-emerald-350">
                           <div className="flex flex-col">
@@ -703,7 +741,7 @@ export default function AdminPage() {
                           </div>
                         </th>
                       ))}
-                      <th className="p-4 text-rose-450 text-center">Xoá</th>
+                      <th className="p-4 text-rose-450 text-center">{t.admin.thDelete}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-850">
@@ -729,7 +767,7 @@ export default function AdminPage() {
                           const transcript = record.transcripts.evaluators.find(e => e.evaluator === ev);
                           return (
                             <td key={ev} className="p-4 font-mono text-emerald-400 lowercase">
-                              {transcript ? transcript.text : <span className="text-slate-700 italic">Chưa đánh giá</span>}
+                              {transcript ? transcript.text : <span className="text-slate-750 italic">{t.admin.notEvaluated}</span>}
                             </td>
                           );
                         })}
@@ -762,43 +800,43 @@ export default function AdminPage() {
               <div className="bg-slate-900/40 border border-slate-850 rounded-2xl p-6 shadow-xl">
                 <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-4">
                   <Link2 className="w-4 h-4 text-indigo-400" />
-                  Tạo liên kết truy cập mới
+                  {t.admin.tokenTitle}
                 </h3>
                 
                 <form onSubmit={handleGenerateToken} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] text-slate-400 uppercase font-semibold">Vai trò sử dụng</label>
+                    <label className="text-[11px] text-slate-400 uppercase font-semibold">{t.admin.tokenRole}</label>
                     <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-900">
                       <button
                         type="button"
                         onClick={() => setNewTokenRole('student')}
-                        className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                        className={`py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
                           newTokenRole === 'student'
                             ? 'bg-indigo-600 text-white'
                             : 'text-slate-450 hover:text-slate-250'
                         }`}
                       >
-                        Học viên
+                        {t.common.student}
                       </button>
                       <button
                         type="button"
                         onClick={() => setNewTokenRole('evaluator')}
-                        className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                        className={`py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
                           newTokenRole === 'evaluator'
                             ? 'bg-indigo-600 text-white'
                             : 'text-slate-450 hover:text-slate-250'
                         }`}
                       >
-                        Thẩm định viên
+                        {t.common.evaluator}
                       </button>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] text-slate-400 uppercase font-semibold">Nhãn định danh</label>
+                    <label className="text-[11px] text-slate-400 uppercase font-semibold">{t.admin.tokenLabel}</label>
                     <input
                       type="text"
-                      placeholder="VD: Lớp 10A, Prof. Nam..."
+                      placeholder={t.admin.tokenPlaceholder}
                       value={newTokenLabel}
                       onChange={(e) => setNewTokenLabel(e.target.value)}
                       className="bg-slate-950/80 border border-slate-850 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none"
@@ -807,9 +845,9 @@ export default function AdminPage() {
 
                   <button
                     type="submit"
-                    className="py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs transition"
+                    className="py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs transition cursor-pointer"
                   >
-                    Tạo liên kết
+                    {t.admin.createLink}
                   </button>
                 </form>
               </div>
@@ -817,11 +855,11 @@ export default function AdminPage() {
 
             {/* Right: Tokens Grid list */}
             <div className="md:col-span-8 flex flex-col gap-4">
-              <h3 className="text-sm font-bold text-slate-200">Danh sách mã liên kết hoạt động</h3>
+              <h3 className="text-sm font-bold text-slate-200">{t.admin.tokenSub}</h3>
               <div className="flex flex-col gap-3">
                 {tokens.length === 0 ? (
                   <div className="py-12 border border-slate-850 rounded-2xl text-center text-slate-500 text-xs">
-                    Chưa có liên kết nào được tạo.
+                    {t.admin.noTokens}
                   </div>
                 ) : (
                   tokens.map((tk) => {
@@ -841,7 +879,7 @@ export default function AdminPage() {
                                 ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/15'
                                 : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
                             }`}>
-                              {tk.role === 'student' ? 'Học viên' : 'Thẩm định'}
+                              {tk.role === 'student' ? t.common.student : t.common.evaluator}
                             </span>
                             <span className="text-xs text-slate-200 font-bold truncate">{tk.label}</span>
                           </div>
@@ -851,14 +889,14 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2 self-end sm:self-center">
                           <button
                             onClick={() => copyToClipboard(tk.id, joinLink)}
-                            className={`flex items-center justify-center gap-1 px-3 py-1.5 border rounded-lg text-[11px] font-semibold transition ${
+                            className={`flex items-center justify-center gap-1 px-3 py-1.5 border rounded-lg text-[11px] font-semibold transition cursor-pointer ${
                               isCopied
                                 ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400'
                                 : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-200'
                             }`}
                           >
                             {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                            {isCopied ? 'Đã sao chép' : 'Sao chép liên kết'}
+                            {isCopied ? t.admin.copied : t.admin.copyLink}
                           </button>
                           <button
                             onClick={() => handleDeleteToken(tk.id)}
