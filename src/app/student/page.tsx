@@ -311,7 +311,7 @@ export default function StudentPage() {
 
         // E. Immediately trigger AI model transcription pipeline
         try {
-          console.log(`Triggering auto-transcription for record ${recordId}...`);
+          // console.log(`Triggering auto-transcription for record ${recordId}...`);
           const transcribeResponse = await fetch('/api/transcribe-audio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -325,7 +325,7 @@ export default function StudentPage() {
             const errData = await transcribeResponse.json();
             console.error(`Auto-transcription error for record ${recordId}:`, errData.error);
           } else {
-            console.log(`Auto-transcription succeeded for record ${recordId}`);
+            // console.log(`Auto-transcription succeeded for record ${recordId}`);
           }
         } catch (transcribeErr) {
           console.error(`Failed to call transcribe API for record ${recordId}:`, transcribeErr);

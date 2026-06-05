@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Download the audio file from its public Supabase Storage URL
-    console.log(`Downloading audio file from URL: ${audio_url}...`);
+    // console.log(`Downloading audio file from URL: ${audio_url}...`);
     const audioResponse = await fetch(audio_url);
     if (!audioResponse.ok) {
       throw new Error(`Failed to download audio file from Supabase Storage: ${audioResponse.statusText}`);
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     formData.append('files', audioBlob, 'audio.webm');
 
     const modalSTTUrl = process.env.MODAL_STT_URL || 'https://nhakhoa02--doraebin-stt-sttservice-transcribe.modal.run';
-    console.log(`Forwarding audio data to Modal STT service at: ${modalSTTUrl}...`);
+    // console.log(`Forwarding audio data to Modal STT service at: ${modalSTTUrl}...`);
     
     // 3. Make the API request to Modal STT
     const modalResponse = await fetch(modalSTTUrl, {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const sttResult = await modalResponse.json();
-    console.log('STT prediction retrieved successfully:', JSON.stringify(sttResult));
+    // console.log('STT prediction retrieved successfully:', JSON.stringify(sttResult));
 
     // Extract the translations of the first result file
     const fileResult = sttResult?.results?.[0];
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       }
     ];
 
-    console.log(`Inserting ${modelTranscriptsInserts.length} model predictions into transcripts table...`);
+    // console.log(`Inserting ${modelTranscriptsInserts.length} model predictions into transcripts table...`);
     const { error: insertError } = await supabase
       .from('transcripts')
       .insert(modelTranscriptsInserts);
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       throw insertError;
     }
 
-    console.log('Transcription pipeline completed successfully!');
+    // console.log('Transcription pipeline completed successfully!');
     return NextResponse.json({
       success: true,
       transcripts: transcripts
