@@ -307,7 +307,7 @@ export default function AdminPage() {
     let csvContent = "\uFEFF";
     
     // Build CSV Headers: dynamically add evaluator columns
-    const headers = ["Mã Ghi Âm", "Từ Gốc", "Moonshine Quantized", "Zipformer Vi (2025)", "Zipformer Vi (30M)"];
+    const headers = ["Mã Ghi Âm", "Tên Audio", "Moonshine Quantized", "Zipformer Vi (2025)", "Zipformer Vi (30M)"];
     allEvaluators.forEach(ev => {
       const label = getUserLabel(ev);
       headers.push(`"${label.replace(/"/g, '""')}"`);
