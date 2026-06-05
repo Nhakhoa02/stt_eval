@@ -17,13 +17,7 @@ interface AuthToken {
   created_at: string;
 }
 
-interface PendingRecord {
-  id: string;
-  word_text: string;
-  audio_url: string;
-  student_token: string;
-  created_at: string;
-}
+
 
 interface ApprovedRecord {
   id: string;
@@ -47,20 +41,14 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState<string>('');
   const [lang, setLang] = useState<Language>('vi');
 
-  // Tab state: 'moderation' | 'analytics' | 'tokens'
-  const [activeTab, setActiveTab] = useState<'moderation' | 'analytics' | 'tokens'>('moderation');
+  // Tab state: 'analytics' | 'tokens'
+  const [activeTab, setActiveTab] = useState<'analytics' | 'tokens'>('analytics');
 
   // Token Generator states
   const [tokens, setTokens] = useState<AuthToken[]>([]);
   const [newTokenRole, setNewTokenRole] = useState<'student' | 'evaluator'>('student');
   const [newTokenLabel, setNewTokenLabel] = useState<string>('');
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
-
-  // Moderation states
-  const [pendingRecords, setPendingRecords] = useState<PendingRecord[]>([]);
-  const [pendingLoading, setPendingLoading] = useState<boolean>(false);
-  const [approvingIds, setApprovingIds] = useState<string[]>([]);
-  const [decliningIds, setDecliningIds] = useState<string[]>([]);
 
   // Analytics states
   const [approvedRecords, setApprovedRecords] = useState<ApprovedRecord[]>([]);
@@ -96,7 +84,6 @@ export default function AdminPage() {
   // Load all tables on login
   const loadAdminData = () => {
     loadTokens();
-    loadPendingRecords();
     loadAnalytics();
   };
 
@@ -203,85 +190,7 @@ export default function AdminPage() {
     setTimeout(() => setCopiedTokenId(null), 2000);
   };
 
-  // 3. Audio Pending Moderations
-  const loadPendingRecords = async () => {
-    setPendingLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('audio_records')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true });
-        
-      if (!error && data) {
-        setPendingRecords(data);
-      }
-    } catch (err) {
-      console.error('Error loading pending records:', err);
-    } finally {
-      setPendingLoading(false);
-    }
-  };
 
-  const handleApprove = async (record: PendingRecord) => {
-    setApprovingIds(prev => [...prev, record.id]);
-    
-    try {
-      // A. Call the Next.js API route to download from Supabase, forward to Modal, and save model transcripts
-      const response = await fetch('/api/transcribe-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          audio_record_id: record.id,
-          audio_url: record.audio_url
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Inference engine failed.');
-      }
-      
-      // B. Update the audio record status to approved
-      const { error: updateError } = await supabase
-        .from('audio_records')
-        .update({ status: 'approved' })
-        .eq('id', record.id);
-        
-      if (updateError) throw updateError;
-      
-      // C. Update list views
-      setPendingRecords(prev => prev.filter(r => r.id !== record.id));
-      loadAnalytics(); // Reload spreadsheet
-      
-    } catch (err: any) {
-      console.error('Approval failed:', err);
-      alert(`Duyệt ghi âm thất bại: ${err.message || 'Lỗi kết nối Modal STT.'}`);
-    } finally {
-      setApprovingIds(prev => prev.filter(id => id !== record.id));
-    }
-  };
-
-  const handleDecline = async (id: string) => {
-    if (!confirm('Từ chối bản thu âm này sẽ xoá hoàn toàn khỏi cơ sở dữ liệu. Bạn chắc chứ?')) return;
-    
-    setDecliningIds(prev => [...prev, id]);
-    
-    try {
-      // Delete the record. CASCADE deletes associated transcripts automatically
-      const { error } = await supabase
-        .from('audio_records')
-        .delete().eq('id', id);
-        
-      if (error) throw error;
-      
-      setPendingRecords(prev => prev.filter(r => r.id !== id));
-    } catch (err) {
-      alert('Không thể từ chối bản thu.');
-    } finally {
-      setDecliningIds(prev => prev.filter(item => item !== id));
-    }
-  };
 
   const handleDeleteRecord = async (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xoá vĩnh viễn bản ghi âm và tất cả kết quả liên quan không?')) return;
@@ -538,16 +447,6 @@ export default function AdminPage() {
       <div className="bg-slate-950 border-b border-slate-900 sticky top-[73px] z-40 px-6 py-2">
         <div className="max-w-5xl mx-auto flex gap-2">
           <button
-            onClick={() => setActiveTab('moderation')}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
-              activeTab === 'moderation'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            {t.admin.tabModeration} ({pendingRecords.length})
-          </button>
-          <button
             onClick={() => setActiveTab('analytics')}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               activeTab === 'analytics'
@@ -573,105 +472,7 @@ export default function AdminPage() {
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col gap-6">
 
-        {/* -------------------------------------------------------------
-            TAB: MODERATION QUEUE
-            ------------------------------------------------------------- */}
-        {activeTab === 'moderation' && (
-          <section className="flex flex-col gap-4">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-900">
-              <div>
-                <h2 className="text-xl font-bold text-slate-100">{t.admin.moderationTitle}</h2>
-                <p className="text-xs text-slate-400">{t.admin.moderationSub}</p>
-              </div>
-              <button 
-                onClick={loadPendingRecords} 
-                className="p-2 text-slate-450 hover:text-slate-250 hover:bg-slate-900 rounded-lg transition cursor-pointer"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
 
-            {pendingLoading ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                <p className="text-sm text-slate-400">{lang === 'en' ? 'Loading pending records...' : 'Đang tải danh sách chờ duyệt...'}</p>
-              </div>
-            ) : pendingRecords.length === 0 ? (
-              <div className="py-20 border border-dashed border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center p-8 bg-slate-900/10">
-                <CheckCircle className="w-12 h-12 text-slate-700 stroke-1 mb-3" />
-                <p className="text-sm text-slate-500">{t.admin.noPending}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingRecords.map((record) => {
-                  const isApproving = approvingIds.includes(record.id);
-                  const isDeclining = decliningIds.includes(record.id);
-                  const isDisabled = isApproving || isDeclining;
-                  
-                  return (
-                    <div 
-                      key={record.id}
-                      className="bg-slate-900/40 border border-slate-850 rounded-2xl p-5 flex flex-col gap-4 shadow-lg hover:border-slate-800 transition"
-                    >
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="min-w-0">
-                          <span className="text-xs text-indigo-400 uppercase font-semibold">{t.admin.studentText}</span>
-                          <h4 className="text-lg font-extrabold capitalize text-slate-100 truncate">{record.word_text}</h4>
-                        </div>
-                        
-                        {/* Inline Audio Player */}
-                        <button
-                          onClick={() => togglePlayAudio(record.id, record.audio_url)}
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center border transition cursor-pointer ${
-                            activePlayingId === record.id
-                              ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
-                              : 'bg-slate-850 border-slate-800 text-slate-350 hover:bg-slate-800'
-                          }`}
-                        >
-                          {activePlayingId === record.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                        </button>
-                      </div>
-
-                      <div className="flex justify-between items-center text-xs text-slate-500 bg-slate-950/40 p-2 rounded-xl border border-slate-950">
-                        <span>{t.admin.studentLabel} <strong className="text-slate-300">{getUserLabel(record.student_token)}</strong></span>
-                        <span>{new Date(record.created_at).toLocaleTimeString(lang === 'en' ? 'en-US' : 'vi-VN')}</span>
-                      </div>
-
-                      {/* Approval triggers */}
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => handleApprove(record)}
-                          disabled={isDisabled}
-                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50 disabled:cursor-wait cursor-pointer"
-                        >
-                          {isApproving ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              {t.admin.approving}
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              {t.admin.approveCallAI}
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDecline(record.id)}
-                          disabled={isDisabled}
-                          className="px-3 py-2 bg-slate-850 hover:bg-rose-900/20 hover:border-rose-900/30 border border-slate-800 text-rose-400 font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition disabled:opacity-50 cursor-pointer"
-                        >
-                          {isDeclining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                          {t.admin.decline}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        )}
 
         {/* -------------------------------------------------------------
             TAB: ANALYTICS & SPREADSHEETS

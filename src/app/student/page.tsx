@@ -297,18 +297,44 @@ export default function StudentPage() {
           
         const audioUrl = urlData.publicUrl;
         
-        // D. Insert record into audio_records table
-        const { error: insertError } = await supabase
+        // D. Insert record into audio_records table with 'approved' status and retrieve its ID
+        const { data: insertedData, error: insertError } = await supabase
           .from('audio_records')
           .insert({
             word_text: clip.wordText,
             audio_url: audioUrl,
             student_token: token,
-            status: 'pending'
-          });
+            status: 'approved'
+          })
+          .select('id')
+          .single();
           
-        if (insertError) {
-          throw insertError;
+        if (insertError || !insertedData) {
+          throw insertError || new Error('Failed to insert audio record.');
+        }
+
+        const recordId = insertedData.id;
+
+        // E. Immediately trigger AI model transcription pipeline
+        try {
+          console.log(`Triggering auto-transcription for record ${recordId}...`);
+          const transcribeResponse = await fetch('/api/transcribe-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audio_record_id: recordId,
+              audio_url: audioUrl
+            })
+          });
+
+          if (!transcribeResponse.ok) {
+            const errData = await transcribeResponse.json();
+            console.error(`Auto-transcription error for record ${recordId}:`, errData.error);
+          } else {
+            console.log(`Auto-transcription succeeded for record ${recordId}`);
+          }
+        } catch (transcribeErr) {
+          console.error(`Failed to call transcribe API for record ${recordId}:`, transcribeErr);
         }
       }
       

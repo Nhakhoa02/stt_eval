@@ -60,7 +60,7 @@ export const i18n = {
       deleteDraft: 'Xoá nháp',
       confirmDelete: 'Bạn có chắc chắn muốn xoá bản thu này?',
       uploadSuccess: 'Tải lên thành công!',
-      uploadSuccessSub: 'Tất cả bản thu âm đã được gửi đi duyệt. Cảm ơn sự đóng góp của bạn!',
+      uploadSuccessSub: 'Tất cả bản thu âm đã được gửi thành công. Cảm ơn sự đóng góp của bạn!',
       errorTitle: 'Không thể ghi âm',
       errorSub: 'Vui lòng cho phép quyền truy cập micro trong trình duyệt của bạn.'
     },
@@ -180,7 +180,7 @@ export const i18n = {
       deleteDraft: 'Delete draft',
       confirmDelete: 'Are you sure you want to delete this draft?',
       uploadSuccess: 'Upload Succeeded!',
-      uploadSuccessSub: 'All recordings have been submitted for review. Thank you for your contribution!',
+      uploadSuccessSub: 'All recordings have been submitted successfully. Thank you for your contribution!',
       errorTitle: 'Microphone Error',
       errorSub: 'Please allow microphone access in your browser settings.'
     },
