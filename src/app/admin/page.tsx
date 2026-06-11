@@ -33,6 +33,16 @@ interface ApprovedRecord {
   };
 }
 
+// Helper to extract target word from combined audio name string
+const getTargetWord = (wordText: string): string => {
+  if (!wordText) return '';
+  const parts = wordText.split(' - ');
+  if (parts.length >= 3) {
+    return parts.slice(2).join(' - ');
+  }
+  return wordText;
+};
+
 export default function AdminPage() {
   // Auth states
   const [passcode, setPasscode] = useState<string>('');
@@ -307,7 +317,7 @@ export default function AdminPage() {
     let csvContent = "\uFEFF";
     
     // Build CSV Headers: dynamically add evaluator columns
-    const headers = ["Mã Ghi Âm", "Tên Audio", "Moonshine Quantized", "Zipformer Vi (2025)", "Zipformer Vi (30M)"];
+    const headers = ["Mã Ghi Âm", "Tên Audio", "Từ Gốc / Target Word", "Moonshine Quantized", "Zipformer Vi (2025)", "Zipformer Vi (30M)"];
     allEvaluators.forEach(ev => {
       const label = getUserLabel(ev);
       headers.push(`"${label.replace(/"/g, '""')}"`);
@@ -318,6 +328,7 @@ export default function AdminPage() {
       const row = [
         r.id,
         `"${r.word_text.replace(/"/g, '""')}"`,
+        `"${getTargetWord(r.word_text).replace(/"/g, '""')}"`,
         `"${r.transcripts.moonshine.replace(/"/g, '""')}"`,
         `"${r.transcripts.zipformer_2025.replace(/"/g, '""')}"`,
         `"${r.transcripts.zipformer_30m.replace(/"/g, '""')}"`
@@ -531,6 +542,7 @@ export default function AdminPage() {
                     <tr className="bg-slate-900/80 border-b border-slate-850 text-slate-350 font-bold uppercase tracking-wider">
                       <th className="p-4">{t.admin.thAudio}</th>
                       <th className="p-4">{t.admin.thWord}</th>
+                      <th className="p-4 text-emerald-400">{lang === 'en' ? 'Target Word' : 'Từ gốc'}</th>
                       <th className="p-4 text-indigo-300">{t.admin.thMoonshine}</th>
                       <th className="p-4 text-indigo-300">{t.admin.thZipformer2025}</th>
                       <th className="p-4 text-indigo-300">{t.admin.thZipformer30M}</th>
@@ -561,6 +573,7 @@ export default function AdminPage() {
                           </button>
                         </td>
                         <td className="p-4 font-extrabold capitalize text-slate-100">{record.word_text}</td>
+                        <td className="p-4 font-semibold text-emerald-400 capitalize">{getTargetWord(record.word_text)}</td>
                         <td className="p-4 font-mono text-indigo-400">{record.transcripts.moonshine || '—'}</td>
                         <td className="p-4 font-mono text-indigo-450 uppercase">{record.transcripts.zipformer_2025 || '—'}</td>
                         <td className="p-4 font-mono text-indigo-450 uppercase">{record.transcripts.zipformer_30m || '—'}</td>
