@@ -26,6 +26,9 @@ export default function StudentPage() {
   const [lang, setLang] = useState<Language>('vi');
 
   // App states
+  const [words, setWords] = useState<string[]>([]);
+  const [activeWord, setActiveWord] = useState<string>('đất nước');
+  const [customWord, setCustomWord] = useState<string>('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [clips, setClips] = useState<RecordedClip[]>([]);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
@@ -63,12 +66,53 @@ export default function StudentPage() {
     setToken(savedToken);
     setLabel(savedLabel || '');
     setAuthorized(true);
+
+    // Load words list
+    loadWords();
   }, [router]);
 
   const toggleLang = () => {
     const next = lang === 'vi' ? 'en' : 'vi';
     setLang(next);
     localStorage.setItem('doraebin_lang', next);
+  };
+
+  // Load words from sample_text table
+  const loadWords = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sample_text')
+        .select('text')
+        .order('id', { ascending: true });
+      
+      if (!error && data && data.length > 0) {
+        const textList = data.map(item => item.text);
+        setWords(textList);
+        // Set first word as active
+        setActiveWord(textList[0]);
+      }
+    } catch (err) {
+      console.error('Error loading words:', err);
+    }
+  };
+
+  // Draw random word suggestion
+  const handleRandomWord = () => {
+    if (words.length > 0) {
+      const filtered = words.filter(w => w !== activeWord);
+      const pool = filtered.length > 0 ? filtered : words;
+      const randomWord = pool[Math.floor(Math.random() * pool.length)];
+      setActiveWord(randomWord);
+    }
+  };
+
+  // Apply custom word typed by user
+  const handleUseCustomWord = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customWord.trim()) {
+      setActiveWord(customWord.trim().toLowerCase());
+      setCustomWord('');
+    }
   };
 
   const t = i18n[lang];
@@ -192,7 +236,7 @@ export default function StudentPage() {
 
         const studentName = label || token || 'Student';
         const dateTime = getFormattedDateTime();
-        const clipName = `${studentName} - ${dateTime}`;
+        const clipName = `${studentName} - ${dateTime} - ${activeWord}`;
 
         const newClip: RecordedClip = {
           id: Math.random().toString(36).substring(2, 9),
@@ -398,18 +442,62 @@ export default function StudentPage() {
 
         {/* Left Column: Recording Booth */}
         <section className="md:col-span-7 flex flex-col gap-6">
+          
+          {/* Quick Target Switcher panel */}
+          <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col gap-4">
+            <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
+              <Shuffle className="w-4 h-4 text-indigo-400" />
+              {lang === 'en' ? 'Switch target word' : 'Thay đổi từ phát âm'}
+            </h3>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleRandomWord}
+                disabled={words.length === 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 hover:text-slate-100 transition text-sm text-slate-300 cursor-pointer"
+              >
+                {t.student.randomWord}
+              </button>
+              
+              <div className="h-[1px] sm:h-auto sm:w-[1px] bg-slate-850"></div>
+              
+              <form onSubmit={handleUseCustomWord} className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  placeholder={t.student.wordPlaceholder}
+                  value={customWord}
+                  onChange={(e) => setCustomWord(e.target.value)}
+                  className="flex-1 bg-slate-950/80 border border-slate-850 rounded-xl px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+                />
+                <button
+                  type="submit"
+                  className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center transition cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
+          </div>
+
           <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
             {/* Glow accent */}
             <div className="absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl"></div>
 
-            {/* General Title */}
-            <h2 className="text-2xl font-extrabold text-slate-100 text-center tracking-tight mb-8 bg-gradient-to-b from-white to-slate-200 bg-clip-text text-transparent">
-              {lang === 'en' ? 'Audio Recorder' : 'Bộ Ghi Âm Giọng Nói'}
+            <span className="text-xs text-indigo-400 tracking-wider uppercase font-semibold mb-3">{t.student.targetWord}</span>
+
+            {/* Bold Target Vietnamese Word Display */}
+            <h2 className="text-4xl md:text-5xl font-extrabold text-slate-100 text-center tracking-tight capitalize select-all mb-8 bg-gradient-to-b from-white to-slate-200 bg-clip-text text-transparent">
+              {activeWord}
             </h2>
 
             {/* Interactive Visualizer Canvas */}
             <div className="w-full h-24 bg-slate-950/60 border border-slate-900 rounded-2xl overflow-hidden relative mb-8">
               <canvas ref={canvasRef} className="w-full h-full" width={400} height={96} />
+              {!isRecording && (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
+                  {lang === 'en' ? 'Device ready. Click micro to speak.' : 'Thiết bị sẵn sàng. Nhấn để bắt đầu đọc.'}
+                </div>
+              )}
             </div>
 
             {/* pulsating record trigger button & upload button */}
